@@ -1,0 +1,61 @@
+---
+- name: Configure Spark Cluster
+  hosts: spark_cluster
+  become: yes
+  vars:
+    spark_version: "3.5.0"
+    spark_url: "https://archive.apache.org/dist/spark/spark-3.5.0/spark-3.5.0-bin-hadoop3.tgz"
+    # We explicitly tell the workers where the master is
+    spark_master_ip: "<IP>"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Java (OpenJDK 11)
+      apt:
+        name: openjdk-11-jdk
+        state: present
+
+    - name: Install Dependencies
+      apt:
+        name: 
+          - wget
+          - tar
+        state: present
+
+    - name: Download Spark
+      get_url:
+        url: "{{ spark_url }}"
+        dest: /tmp/spark.tgz
+
+    - name: Create Spark Directory
+      file:
+        path: /opt/spark
+        state: directory
+        mode: '0755'
+
+    - name: Extract Spark
+      unarchive:
+        src: /tmp/spark.tgz
+        dest: /opt/spark
+        remote_src: yes
+        extra_opts: [--strip-components=1]
+
+    - name: Set Environment Variables in .bashrc
+      lineinfile:
+        path: /home/ubuntu/.bashrc
+        line: "export SPARK_HOME=/opt/spark\nexport PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin"
+        create: yes
+
+    # --- MASTER CONFIGURATION ---
+    - name: Start Spark Master
+      shell: "/opt/spark/sbin/start-master.sh"
+      when: "'master' in group_names"
+
+    # --- WORKER CONFIGURATION ---
+    - name: Start Spark Worker
+      # The correction is here: added the missing '}'
+      shell: "/opt/spark/sbin/start-worker.sh spark://{{ spark_master_ip }}:7077"
+      when: "'workers' in group_names"
