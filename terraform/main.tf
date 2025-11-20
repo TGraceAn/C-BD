@@ -1,10 +1,10 @@
 provider "google" {
-  project = "heroic-overview-478821-n0"
-  region  = "us-central1"
-  zone    = "us-central1-a"
+  project = var.project_id
+  region  = var.region
+  zone    = var.zone
 }
 
-# 1. Create a Custom Network (VPC)
+# 1. VPC
 resource "google_compute_network" "spark_vpc" {
   name                    = "spark-vpc"
   auto_create_subnetworks = false
@@ -13,16 +13,14 @@ resource "google_compute_network" "spark_vpc" {
 resource "google_compute_subnetwork" "spark_subnet" {
   name          = "spark-subnet"
   ip_cidr_range = "10.0.1.0/24"
-  region        = "us-central1"
+  region        = var.region
   network       = google_compute_network.spark_vpc.id
 }
 
-# 2. Firewall Rules
-# Allow internal traffic between Master and Workers
+# 2. Firewalls
 resource "google_compute_firewall" "allow_internal" {
   name    = "allow-internal"
   network = google_compute_network.spark_vpc.name
-
   allow {
     protocol = "icmp"
   }
@@ -37,11 +35,9 @@ resource "google_compute_firewall" "allow_internal" {
   source_ranges = ["10.0.1.0/24"]
 }
 
-# Allow SSH from the outside world
 resource "google_compute_firewall" "allow_ssh" {
   name    = "allow-ssh"
   network = google_compute_network.spark_vpc.name
-
   allow {
     protocol = "tcp"
     ports    = ["22"]
@@ -49,11 +45,9 @@ resource "google_compute_firewall" "allow_ssh" {
   source_ranges = ["0.0.0.0/0"]
 }
 
-# Allow Spark UI (8080)
 resource "google_compute_firewall" "allow_spark_ui" {
   name    = "allow-spark-ui"
   network = google_compute_network.spark_vpc.name
-
   allow {
     protocol = "tcp"
     ports    = ["8080", "4040"]
@@ -61,71 +55,63 @@ resource "google_compute_firewall" "allow_spark_ui" {
   source_ranges = ["0.0.0.0/0"]
 }
 
-# 3. VM Instances
-# Spark Master
+# 3. Instances
+# Master Node
 resource "google_compute_instance" "spark_master" {
   name         = "spark-master"
   machine_type = "e2-medium"
-
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
     }
   }
-
   network_interface {
     subnetwork = google_compute_subnetwork.spark_subnet.id
     access_config {}
   }
-
   metadata = {
-    ssh-keys = "ubuntu:${file("../keys/spark_key.pub")}"
+    # DIRECTLY INJECT KEY (No cloud_init.cfg needed)
+    ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
   }
 }
 
-# Spark Worker
+# Worker Node
 resource "google_compute_instance" "spark_worker_1" {
   name         = "spark-worker-1"
   machine_type = "e2-medium"
-
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
     }
   }
-
   network_interface {
     subnetwork = google_compute_subnetwork.spark_subnet.id
     access_config {}
   }
-
   metadata = {
-    ssh-keys = "ubuntu:${file("../keys/spark_key.pub")}"
+    ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
   }
 }
 
-# Spark Edge
+# Edge Node
 resource "google_compute_instance" "spark_edge" {
   name         = "spark-edge"
   machine_type = "e2-small"
-
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
     }
   }
-
   network_interface {
     subnetwork = google_compute_subnetwork.spark_subnet.id
     access_config {}
   }
-
   metadata = {
-    ssh-keys = "ubuntu:${file("../keys/spark_key.pub")}"
+    ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
   }
 }
 
-# Output IPs
+# Outputs
 output "master_ip" {
   value = google_compute_instance.spark_master.network_interface.0.access_config.0.nat_ip
 }

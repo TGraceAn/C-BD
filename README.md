@@ -49,7 +49,7 @@ ansible-playbook -i inventory.ini site.yml
 ```
 **8. IMPORTANT:** SAVE MONEY by
 ```
-cd terraform
+cd ../terraform
 terraform destroy -auto-approve
 ```
 9. To re-run after destroy...
