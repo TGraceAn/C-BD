@@ -248,4 +248,4 @@ http://<MASTER-EXTERNAL-IP>:8080
 
 |    | 2 Nodes | 3 Nodes |4 Nodes |
 | -------- | ------- | ------- |------- |
-| Speed (ms)  | 50517    |43588 | (update later) |
+| Speed (ms)  | 50517    |43588 | 32510 |
