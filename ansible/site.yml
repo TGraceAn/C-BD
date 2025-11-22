@@ -5,8 +5,8 @@
   vars:
     spark_version: "3.5.0"
     spark_url: "https://archive.apache.org/dist/spark/spark-3.5.0/spark-3.5.0-bin-hadoop3.tgz"
-    # We explicitly tell the workers where the master is
-    spark_master_ip: "<IP>"
+    # Tell the workers where the master is
+    spark_master_ip: "10.0.1.3"
 
   tasks:
     - name: Update apt cache
@@ -48,6 +48,12 @@
         path: /home/ubuntu/.bashrc
         line: "export SPARK_HOME=/opt/spark\nexport PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin"
         create: yes
+
+    - name: Download GCS Connector JAR
+      get_url:
+        url: "https://github.com/GoogleCloudDataproc/hadoop-connectors/releases/download/v2.2.16/gcs-connector-hadoop3-2.2.16-shaded.jar"
+        dest: /opt/spark/jars/gcs-connector-hadoop3.jar
+        mode: '0644'
 
     # --- MASTER CONFIGURATION ---
     - name: Start Spark Master

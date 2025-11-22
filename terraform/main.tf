@@ -60,6 +60,7 @@ resource "google_compute_firewall" "allow_spark_ui" {
 resource "google_compute_instance" "spark_master" {
   name         = "spark-master"
   machine_type = "e2-medium"
+  allow_stopping_for_update = true
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
@@ -70,8 +71,10 @@ resource "google_compute_instance" "spark_master" {
     access_config {}
   }
   metadata = {
-    # DIRECTLY INJECT KEY (No cloud_init.cfg needed)
     ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
+  }
+  service_account {
+    scopes = ["cloud-platform"]
   }
 }
 
@@ -79,6 +82,7 @@ resource "google_compute_instance" "spark_master" {
 resource "google_compute_instance" "spark_worker_1" {
   name         = "spark-worker-1"
   machine_type = "e2-medium"
+  allow_stopping_for_update = true
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
@@ -87,6 +91,30 @@ resource "google_compute_instance" "spark_worker_1" {
   network_interface {
     subnetwork = google_compute_subnetwork.spark_subnet.id
     access_config {}
+  }
+  service_account {
+    scopes = ["cloud-platform"]
+  }
+  metadata = {
+    ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
+  }
+}
+
+resource "google_compute_instance" "spark_worker_2" {
+  name         = "spark-worker-2"
+  machine_type = "e2-medium"
+  allow_stopping_for_update = true
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+    }
+  }
+  network_interface {
+    subnetwork = google_compute_subnetwork.spark_subnet.id
+    access_config {}
+  }
+  service_account {
+    scopes = ["cloud-platform"]
   }
   metadata = {
     ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
@@ -97,6 +125,7 @@ resource "google_compute_instance" "spark_worker_1" {
 resource "google_compute_instance" "spark_edge" {
   name         = "spark-edge"
   machine_type = "e2-small"
+  allow_stopping_for_update = true
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
@@ -105,6 +134,9 @@ resource "google_compute_instance" "spark_edge" {
   network_interface {
     subnetwork = google_compute_subnetwork.spark_subnet.id
     access_config {}
+  }
+  service_account {
+    scopes = ["cloud-platform"]
   }
   metadata = {
     ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
@@ -120,4 +152,7 @@ output "worker_ip" {
 }
 output "edge_ip" {
   value = google_compute_instance.spark_edge.network_interface.0.access_config.0.nat_ip
+}
+output "worker_2_ip" {
+  value = google_compute_instance.spark_worker_2.network_interface.0.access_config.0.nat_ip
 }
