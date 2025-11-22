@@ -66,13 +66,15 @@ resource "google_compute_instance" "spark_master" {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
     }
   }
-  network_interface {
+network_interface {
     subnetwork = google_compute_subnetwork.spark_subnet.id
+    network_ip = "10.0.1.10"
     access_config {}
   }
   metadata = {
     ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
   }
+  
   service_account {
     scopes = ["cloud-platform"]
   }
@@ -121,6 +123,29 @@ resource "google_compute_instance" "spark_worker_2" {
   }
 }
 
+# ADD THIS BLOCK
+resource "google_compute_instance" "spark_worker_3" {
+  name         = "spark-worker-3"
+  machine_type = "e2-medium"
+  allow_stopping_for_update = true
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+    }
+  }
+  network_interface {
+    subnetwork = google_compute_subnetwork.spark_subnet.id
+    access_config {}
+  }
+  service_account {
+    scopes = ["cloud-platform"]
+  }
+  metadata = {
+    ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
+  }
+  
+}
+
 # Edge Node
 resource "google_compute_instance" "spark_edge" {
   name         = "spark-edge"
@@ -155,4 +180,7 @@ output "edge_ip" {
 }
 output "worker_2_ip" {
   value = google_compute_instance.spark_worker_2.network_interface.0.access_config.0.nat_ip
+}
+output "worker_3_ip" {
+  value = google_compute_instance.spark_worker_3.network_interface.0.access_config.0.nat_ip
 }

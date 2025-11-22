@@ -50,31 +50,31 @@ zone       = "us-central1-a"
 ssh_user   = "ubuntu"
 ```
 - Then run
-```
+```bash
 cd terraform
 terraform init
 terraform apply -auto-approve
 ```
 - After this you should but the correct IP for the ansible (inventory EXTERNAL_IP), site -> INTERNAL_IP for master (use ```gcloud compute instances list```)
 7. Ansible
-```
+```bash
 cd ../ansible
 ansible-playbook -i inventory.ini site.yml
 ```
 8. **IMPORTANT:** SAVE MONEY remember to destroy it after use
-```
+```bash
 cd ../terraform
 terraform destroy -auto-approve
 ```
 9. To re-run after destroy...
 - Run
-```
+```bash
 cd terraform
 terraform apply -auto-approve
 ```
 - Update IPs in the ansible in ```ansible/inventory.ini```
 - Then again
-```
+```bash
 cd ../ansible
 ansible-playbook -i inventory.ini site.yml
 ```
@@ -82,11 +82,12 @@ ansible-playbook -i inventory.ini site.yml
 ### Adding more nodes
 1. Copy ```spark_worker_1``` in ```terraform/main.tf``` to make another one.
 For example
-```
+```bash
 # ADD THIS BLOCK
 resource "google_compute_instance" "spark_worker_2" {
   name         = "spark-worker-2"
   machine_type = "e2-medium"
+  allow_stopping_for_update = true
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
@@ -95,6 +96,9 @@ resource "google_compute_instance" "spark_worker_2" {
   network_interface {
     subnetwork = google_compute_subnetwork.spark_subnet.id
     access_config {}
+  }
+  service_account {
+    scopes = ["cloud-platform"]
   }
   metadata = {
     ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
@@ -106,6 +110,7 @@ output "worker_2_ip" {
   value = google_compute_instance.spark_worker_2.network_interface.0.access_config.0.nat_ip
 }
 ```
+Remember to update ```ansible/inventory.ini``` with more workers
 
 2. Apply the changes
 ```bash
@@ -124,12 +129,12 @@ Ansible will auto skip the ones that already applied.
 
 ## Project setup
 ### Data prep
-1. To setup the "HUGE DATA" let's put it in GCS (Since I don't want to set up 'back up' for HDFS)
+1. To setup the "HUGE DATA" let's put it in GCS (Since I don't want to set up 'back up' for HDFS)<br>
 Set up this in docker (to set up one time GCS)
 ```bash
 gsutil mb -l us-central1 gs://usth-cloud-bigdata-project
 ```
-Of course you can change it to your region with your naming...
+Of course you can change it to your region with your naming...<br>
 Mine: ```gs://usth-bigdata-project-12345```
 
 2. Create the filesample.txt from Hagimont's sample
@@ -166,8 +171,7 @@ ssh -i ../keys/spark_key ubuntu@<EDGE_IP>
 ```bash
 javac -cp "/opt/spark/jars/*:." WordCountStreaming.java
 ```
-Since I'm using spark 3.5 so it will have some warnings but it works fine (I think), change to spark 2.4 like the project if needed.
-
+Since I'm using spark 3.5 so it will have some warnings but it works fine (I think), change to spark 2.4 like the project if needed.<br>
 Remember:
 ```bash
 javac MyNC.java
@@ -203,7 +207,7 @@ Then go to edge
   streaming.jar
 ```
 
-9. Normal, No streaming
+9. Normal, No streaming<br>
 I've created this first for clean printing
 ```bash
 nano log4j.properties
@@ -227,10 +231,15 @@ jar cf wc.jar WordCount.class
 ```bash
 /opt/spark/bin/spark-submit \
   --class WordCount \
-  --master spark://10.0.1.3:7077 \
+  --master spark://10.0.1.10:7077 \
   --conf spark.hadoop.fs.gs.impl=com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem \
   --conf spark.hadoop.fs.AbstractFileSystem.gs.impl=com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS \
   --conf spark.hadoop.google.cloud.auth.service.account.enable=true \
   --driver-java-options "-Dlog4j.configuration=file:/home/ubuntu/log4j.properties" \
   wc.jar gs://usth-bigdata-project-12345/data.txt output_gcs_result
+```
+
+Can always go this link to check:
+```
+http://<MASTER-EXTERNAL-IP>:8080
 ```
