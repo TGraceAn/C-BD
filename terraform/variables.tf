@@ -26,3 +26,9 @@ variable "ssh_pub_key_path" {
   type        = string
   default     = "../keys/spark_key.pub"
 }
+
+variable "worker_count" {
+  description = "The number of worker nodes to deploy"
+  type        = number
+  default     = 2
+}

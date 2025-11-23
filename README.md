@@ -51,22 +51,21 @@ ssh_user   = "ubuntu"
 ```
 - Then run
 ```bash
-cd terraform
-terraform init
-terraform apply -auto-approve
+sh run_terraform.sh <NUM_WORKER>
 ```
-- After this you should but the correct IP for the ansible (inventory EXTERNAL_IP), site -> INTERNAL_IP for master (use ```gcloud compute instances list```)
+- After this you should but the correct IP for the ansible (inventory EXTERNAL_IP), site -> INTERNAL_IP for master (use ```gcloud compute instances list```)<br>
+For mine, I've fixed ot ```10.0.1.10```
 7. Ansible
 ```bash
-cd ../ansible
-ansible-playbook -i inventory.ini site.yml
+sh run_ansible.sh <NUM_WORKER>
 ```
 8. **IMPORTANT:** SAVE MONEY remember to destroy it after use
 ```bash
-cd ../terraform
+cd terraform
 terraform destroy -auto-approve
+cd ..
 ```
-9. To re-run after destroy...
+<!-- 9. To re-run after destroy...
 - Run
 ```bash
 cd terraform
@@ -77,55 +76,13 @@ terraform apply -auto-approve
 ```bash
 cd ../ansible
 ansible-playbook -i inventory.ini site.yml
-```
+``` -->
+<!-- ### Modify nodes
+1. Run the ```run_terraform.sh```
 
-### Adding more nodes
-1. Copy ```spark_worker_1``` in ```terraform/main.tf``` to make another one.
-For example
-```bash
-# ADD THIS BLOCK
-resource "google_compute_instance" "spark_worker_2" {
-  name         = "spark-worker-2"
-  machine_type = "e2-medium"
-  allow_stopping_for_update = true
-  boot_disk {
-    initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2204-lts"
-    }
-  }
-  network_interface {
-    subnetwork = google_compute_subnetwork.spark_subnet.id
-    access_config {}
-  }
-  service_account {
-    scopes = ["cloud-platform"]
-  }
-  metadata = {
-    ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
-  }
-}
-
-# UPDATE OUTPUTS
-output "worker_2_ip" {
-  value = google_compute_instance.spark_worker_2.network_interface.0.access_config.0.nat_ip
-}
-```
-Remember to update ```ansible/inventory.ini``` with more workers
-
-2. Apply the changes
-```bash
-cd terraform
-terraform apply -auto-approve
-```
-
-3. In ```ansible/inventory.ini```, add the IP for the new worker.
-
-4. Then run this
-```bash
-cd ../ansible
-ansible-playbook -i inventory.ini site.yml
-```
-Ansible will auto skip the ones that already applied.
+3. Then run this
+```run_ansible.sh```
+Ansible will auto skip the ones that already applied. -->
 
 ## Project setup
 ### Data prep
@@ -144,6 +101,7 @@ cd data
 nano filesample.txt
 ```
 and paste the content.
+
 3. Create (Add?) the same generate.sh to create a large dataset
 ```bash
 nano generate.sh
@@ -160,13 +118,10 @@ gsutil cp data.txt gs://usth-bigdata-project-12345/data.txt
 ### Application setup
 1. First, connect to the edge node (say you will run stuff from here)
 ```bash
-ssh -i ../keys/spark_key ubuntu@<EDGE_IP>
+ssh -i keys/spark_key ubuntu@<EDGE_IP>
 ```
-
 2. Copy the WCStreaming java files for Spark Streaming from script to get your App (use nano for example)
-
 3. Remember to do ```hostname -I``` to get the host IP
-
 4. To JAR
 ```bash
 javac -cp "/opt/spark/jars/*:." WordCountStreaming.java
@@ -177,12 +132,10 @@ Remember:
 javac MyNC.java
 java -cp . MyNC
 ```
-
 5. Package into jar
 ```bash
 jar cf streaming.jar WordCountStreaming*.class
 ```
-
 6. Test
 ```bash
 java -cp . MyNC
@@ -208,7 +161,7 @@ Then go to edge
 ```
 
 9. Normal, No streaming<br>
-I've created this first for clean printing
+I've created this first for outputs
 ```bash
 nano log4j.properties
 ```
@@ -222,7 +175,6 @@ log4j.appender.console.layout.ConversionPattern=%d{yy/MM/dd HH:mm:ss} %p %c{1}: 
 
 log4j.logger.WordCountStreaming=INFO
 ```
-
 Run:
 ```bash
 javac -cp "/opt/spark/jars/*:." WordCount.java
@@ -246,6 +198,6 @@ http://<MASTER-EXTERNAL-IP>:8080
 
 ### Result
 
-|    | 2 Nodes | 3 Nodes |4 Nodes |
-| -------- | ------- | ------- |------- |
-| Speed (ms)  | 50517    |43588 | 32510 |
+|    | 2 Nodes | 3 Nodes |4 Nodes |5 Nodes |
+| -------- | ------- | ------- |------- |------- |
+| Speed (ms)  | 50517    |43588 | 32510 | 29787 |
