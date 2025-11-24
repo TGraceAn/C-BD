@@ -52,7 +52,7 @@ ssh_user   = "ubuntu"
 ```bash
 sh run_terraform.sh <NUM_WORKER>
 ```
-- After this you should but the correct IP for the ansible (inventory EXTERNAL_IP), site -> INTERNAL_IP for master (use ```gcloud compute instances list```)<br>
+- After this you should put the correct IP for the master IP in the ansible playbook (use ```gcloud compute instances list```)<br>
 For mine, I've fixed ot ```10.0.1.10```
 7. Ansible
 ```bash
@@ -195,7 +195,7 @@ Can always go this link to check:
 http://<MASTER-EXTERNAL-IP>:8080
 ```
 
-### Result
+### Result for a 1GB file
 
 |    | 2 Nodes | 3 Nodes |4 Nodes |5 Nodes |
 | -------- | ------- | ------- |------- |------- |
