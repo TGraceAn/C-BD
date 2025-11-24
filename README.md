@@ -1,5 +1,4 @@
 # C-BD
-initial commit for the project, I think
 
 ## Terraform and Ansible setup
 
